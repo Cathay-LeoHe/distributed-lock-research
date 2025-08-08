@@ -1,0 +1,39 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  
+  h2:
+    console:
+      enabled: false
+
+distributed-lock:
+  provider: redis
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 3000
+    retry-attempts: 3
+  zookeeper:
+    connect-string: localhost:2181
+    session-timeout: 60000
+    connection-timeout: 15000
+    retry-policy:
+      base-sleep-time: 1000
+      max-retries: 3
+
+logging:
+  level:
+    com.example.distributedlock: INFO
+    org.springframework: WARN
+    org.hibernate: WARN

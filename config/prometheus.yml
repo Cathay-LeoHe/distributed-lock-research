@@ -1,0 +1,55 @@
+# Prometheus configuration for Distributed Lock Research Application
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'distributed-lock-monitor'
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Application instances
+  - job_name: 'distributed-lock-app'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: 
+          - 'app1:8080'
+          - 'app2:8080'
+          - 'app3:8080'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__address__]
+        regex: '([^:]+):.*'
+        target_label: service
+        replacement: '${1}'
+
+  # Redis monitoring (if redis_exporter is added)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # ZooKeeper monitoring (if zookeeper_exporter is added)
+  - job_name: 'zookeeper'
+    static_configs:
+      - targets: ['zookeeper:2181']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # Nginx monitoring (if nginx_exporter is added)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    scrape_interval: 30s
+    metrics_path: '/metrics'

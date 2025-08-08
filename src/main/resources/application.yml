@@ -1,0 +1,170 @@
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  
+  application:
+    name: distributed-lock-research
+    
+  # 通用 JPA 配置
+  # jpa:
+  #   open-in-view: false
+  #   properties:
+  #     hibernate:
+  #       jdbc:
+  #         time_zone: UTC
+  #       connection:
+  #         provider_disables_autocommit: true
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:distributed_lock}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10  # 可依需求調整
+      minimum-idle: 2
+      idle-timeout: 60000
+      auto-commit: false  # 禁用自動提交以支援事務
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update  # 依需求可調整為 none, validate, create, create-drop, update
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    defer-datasource-initialization: true  # 延遲資料源初始化，確保表格先建立
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        connection:
+          provider_disables_autocommit: false
+
+  sql:
+    init:
+      mode: never  # 禁用SQL腳本初始化
+      data-locations: classpath:data.sql, classpath:data-${spring.profiles.active}.sql
+      continue-on-error: false  # 遇到錯誤時停止
+      separator: ;
+      encoding: UTF-8
+
+# 資料初始化配置
+data:
+  initialization:
+    enabled: false  # 暫時禁用程式化資料初始化
+
+# 分散式鎖通用配置
+distributed-lock:
+  provider: ${LOCK_PROVIDER:redis} # redis 或 zookeeper
+  
+  # 鎖相關通用配置
+  lock:
+    default-wait-time: 10000 # 預設等待時間 (毫秒)
+    default-lease-time: 30000 # 預設租約時間 (毫秒)
+    max-wait-time: 60000 # 最大等待時間 (毫秒)
+    max-lease-time: 300000 # 最大租約時間 (毫秒)
+    
+  # Redis 基礎配置
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    
+  # ZooKeeper 基礎配置
+  zookeeper:
+    connect-string: ${ZK_CONNECT:localhost:2181}
+    namespace: ${ZK_NAMESPACE:distributed-locks}
+
+# 監控基礎配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,system-info,business-metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: always
+      group:
+        distributed-lock:
+          include: distributedLockHealth
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+    system-info:
+      enabled: true
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+    git:
+      mode: full
+  metrics:
+    tags:
+      application: distributed-lock-research
+    export:
+      prometheus:
+        enabled: true
+        step: 30s
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 10ms, 50ms, 100ms, 200ms, 500ms
+
+# 應用程式基礎配置
+app:
+  name: "Distributed Lock Research"
+  version: "@project.version@"
+  description: "Research project for distributed lock implementations"
+
+# 服務器基礎配置
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# OpenAPI 文件配置
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    displayRequestDuration: true
+  show-actuator: true
+  group-configs:
+    - group: 'banking'
+      display-name: '銀行業務 API'
+      paths-to-match: '/**'
+      packages-to-scan: 'com.example.distributedlock.controllers'
+    - group: 'monitoring'
+      display-name: '監控 API'
+      paths-to-match: '/actuator/**'
+
+# Swagger 自定義配置
+swagger:
+  server:
+    url: ${SWAGGER_SERVER_URL:}
+
+# 日誌基礎配置
+logging:
+  level:
+    root: INFO
+    com.example.distributedlock: INFO

@@ -1,0 +1,158 @@
+# Docker environment configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:distributed_lock}
+    driver-class-name: org.postgresql.Driver
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    defer-datasource-initialization: true  # 延遲資料源初始化，確保表格先建立
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 20
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+        connection:
+          provider_disables_autocommit: true
+
+  sql:
+    init:
+      mode: always  # 總是執行初始化腳本
+      data-locations: classpath:data.sql, classpath:data-docker.sql
+      continue-on-error: false  # 遇到錯誤時停止
+      separator: ;
+      encoding: UTF-8
+
+# 分散式鎖配置 - Docker 環境
+distributed-lock:
+  provider: ${LOCK_PROVIDER:redis}
+  redis:
+    host: ${REDIS_HOST:redis}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: 5000
+    retry-attempts: 5
+    retry-interval: 2000
+    connection-pool-size: 64
+    connection-minimum-idle-size: 10
+    idle-connection-timeout: 10000
+    connect-timeout: 10000
+    ping-connection-interval: 30000
+    keep-alive: true
+    cluster:
+      enabled: ${REDIS_CLUSTER_ENABLED:false}
+      nodes: ${REDIS_CLUSTER_NODES:redis:6379}
+  zookeeper:
+    connect-string: ${ZK_CONNECT:zookeeper:2181}
+    session-timeout: 60000
+    connection-timeout: 15000
+    retry-policy:
+      base-sleep-time: 1000
+      max-retries: 5
+      max-sleep-time: 10000
+
+# 監控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,system-info,business-metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+      group:
+        distributed-lock:
+          include: distributedLockHealth
+        readiness:
+          include: distributedLockHealth,db
+        liveness:
+          include: ping
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+    system-info:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+        step: 15s
+    tags:
+      application: distributed-lock-research
+      environment: docker
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        distributed.lock.acquisition: true
+        banking.transaction: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+        distributed.lock.acquisition: 0.5, 0.95, 0.99
+        banking.transaction: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 10ms, 50ms, 100ms, 200ms, 500ms
+        distributed.lock.acquisition: 1ms, 5ms, 10ms, 50ms, 100ms
+        banking.transaction: 50ms, 100ms, 200ms, 500ms, 1000ms
+
+# 日誌配置 - Docker 環境
+logging:
+  level:
+    root: INFO
+    com.example.distributedlock: INFO
+    org.springframework.transaction: WARN
+    org.redisson: WARN
+    org.apache.curator: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
+
+# 應用程式特定配置
+app:
+  name: "Distributed Lock Research - Docker"
+  version: "@project.version@"
+  description: "Docker environment for distributed lock research"
+  
+# 初始化資料配置
+data:
+  initialization:
+    enabled: true
+    create-sample-accounts: true
+    sample-accounts:
+      - account-number: "ACC001"
+        balance: 10000.00
+      - account-number: "ACC002"
+        balance: 20000.00
+      - account-number: "ACC003"
+        balance: 15000.00
+      - account-number: "ACC004"
+        balance: 5000.00
+      - account-number: "ACC005"
+        balance: 8000.00
+
+# 服務器配置
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    connection-timeout: 20000
+    max-connections: 8192

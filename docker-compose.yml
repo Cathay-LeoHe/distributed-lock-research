@@ -1,0 +1,343 @@
+# Docker Compose configuration for Distributed Lock Research Application
+# Includes Redis, ZooKeeper, and multiple application instances with load balancing
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: distributed-lock-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: distributed_lock
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: Asia/Taipei
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - distributed-lock-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  # Redis Service for distributed locking
+  redis:
+    image: redis:7.2-alpine
+    container_name: distributed-lock-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --timeout 300
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - distributed-lock-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ZooKeeper Service for distributed coordination
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: distributed-lock-zookeeper
+    restart: unless-stopped
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_MAX_CLIENT_CNXNS: 60
+      ZOOKEEPER_AUTOPURGE_SNAP_RETAIN_COUNT: 3
+      ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL: 24
+      ZOOKEEPER_4LW_COMMANDS_WHITELIST: mntr,conf,ruok,stat
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - distributed-lock-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Application Instance 1
+  app1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: distributed-lock-app1
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8080
+      - LOCK_PROVIDER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ZK_HOST=zookeeper
+      - ZK_PORT=2181
+      - INSTANCE_ID=app1
+      - SWAGGER_SERVER_URL=http://localhost:8081
+      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=distributed_lock
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      redis:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - distributed-lock-network
+    healthcheck:
+      test: ["CMD", "/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Application Instance 2
+  app2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: distributed-lock-app2
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8080
+      - LOCK_PROVIDER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ZK_HOST=zookeeper
+      - ZK_PORT=2181
+      - INSTANCE_ID=app2
+      - SWAGGER_SERVER_URL=http://localhost:8082
+      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=distributed_lock
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      redis:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy        
+    networks:
+      - distributed-lock-network
+    healthcheck:
+      test: ["CMD", "/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Application Instance 3
+  app3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: distributed-lock-app3
+    restart: unless-stopped
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8080
+      - LOCK_PROVIDER=zookeeper
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ZK_HOST=zookeeper
+      - ZK_PORT=2181
+      - INSTANCE_ID=app3
+      - SWAGGER_SERVER_URL=http://localhost:8083
+      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=distributed_lock
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      redis:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - distributed-lock-network
+    healthcheck:
+      test: ["CMD", "/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Load Balancer (Nginx)
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: distributed-lock-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Redis-specific routing
+      - "8090:8090"  # ZooKeeper-specific routing
+      - "8888:8888"  # Dynamic routing based on headers
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/conf.d:/etc/nginx/conf.d:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - app1
+      - app2
+      - app3
+    networks:
+      - distributed-lock-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Monitoring - Prometheus (optional)
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: distributed-lock-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - distributed-lock-network
+    profiles:
+      - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Monitoring - Grafana (optional)
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: distributed-lock-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - distributed-lock-network
+    profiles:
+      - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Network configuration
+networks:
+  distributed-lock-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volume configuration
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  nginx_logs:
+    driver: local

@@ -1,0 +1,160 @@
+# Production environment configuration
+spring:
+  datasource:
+    # 生產環境應該使用真實的資料庫，這裡僅作為示範
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/distributed_lock_prod}
+    driver-class-name: ${DATABASE_DRIVER:org.postgresql.Driver}
+    username: ${DATABASE_USERNAME:distributed_lock_user}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      idle-timeout: 600000
+      connection-timeout: 30000
+      leak-detection-threshold: 60000
+      
+  jpa:
+    hibernate:
+      ddl-auto: validate # 生產環境不自動創建表結構
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        connection:
+          provider_disables_autocommit: true
+        
+  h2:
+    console:
+      enabled: false # 生產環境禁用 H2 控制台
+
+# 分散式鎖配置 - 生產環境
+distributed-lock:
+  provider: ${LOCK_PROVIDER:redis}
+  redis:
+    host: ${REDIS_HOST:redis-cluster}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: 10000
+    retry-attempts: 10
+    retry-interval: 3000
+    connection-pool-size: 128
+    connection-minimum-idle-size: 20
+    idle-connection-timeout: 30000
+    connect-timeout: 15000
+    ping-connection-interval: 30000
+    keep-alive: true
+    cluster:
+      enabled: ${REDIS_CLUSTER_ENABLED:true}
+      nodes: ${REDIS_CLUSTER_NODES:redis-node1:6379,redis-node2:6379,redis-node3:6379}
+  zookeeper:
+    connect-string: ${ZK_CONNECT:zk1:2181,zk2:2181,zk3:2181}
+    session-timeout: 120000
+    connection-timeout: 30000
+    retry-policy:
+      base-sleep-time: 2000
+      max-retries: 10
+      max-sleep-time: 30000
+
+# 監控配置 - 生產環境
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+      group:
+        distributed-lock:
+          include: distributedLockHealth
+        readiness:
+          include: distributedLockHealth,db
+        liveness:
+          include: ping
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+    system-info:
+      enabled: false # 生產環境隱藏系統資訊
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+        step: 30s
+    tags:
+      application: distributed-lock-research
+      environment: production
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        distributed.lock.acquisition: true
+        banking.transaction: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+        distributed.lock.acquisition: 0.5, 0.95, 0.99
+        banking.transaction: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 10ms, 50ms, 100ms, 200ms, 500ms
+        distributed.lock.acquisition: 1ms, 5ms, 10ms, 50ms, 100ms
+        banking.transaction: 50ms, 100ms, 200ms, 500ms, 1000ms
+
+# 日誌配置 - 生產環境
+logging:
+  level:
+    root: WARN
+    com.example.distributedlock: INFO
+    org.springframework.transaction: ERROR
+    org.redisson: ERROR
+    org.apache.curator: ERROR
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
+  file:
+    name: /var/log/distributed-lock/application.log
+    max-size: 100MB
+    max-history: 30
+
+# 應用程式特定配置
+app:
+  name: "Distributed Lock Research - Production"
+  version: "@project.version@"
+  description: "Production environment for distributed lock research"
+  
+# 初始化資料配置 - 生產環境禁用示範資料
+data:
+  initialization:
+    enabled: false # 生產環境禁用自動資料初始化
+    create-sample-accounts: false
+    sample-accounts: []
+
+# 服務器配置 - 生產環境優化
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  tomcat:
+    threads:
+      max: 500
+      min-spare: 50
+    connection-timeout: 30000
+    max-connections: 10000
+    accept-count: 200
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+# 安全配置
+security:
+  require-ssl: ${REQUIRE_SSL:true}
+  headers:
+    frame-options: DENY
+    content-type-options: nosniff
+    xss-protection: 1; mode=block

@@ -1,0 +1,641 @@
+{
+  "info": {
+    "name": "Distributed Lock Research API",
+    "description": "分散式鎖研究專案 API 測試集合\n\n本集合包含了所有主要的 API 端點，用於測試銀行交易功能和分散式鎖管理功能。\n\n## 使用說明\n1. 確保應用程式正在運行（預設端口 8080）\n2. 執行 \"Health Check\" 確認服務狀態\n3. 使用 \"Banking Operations\" 資料夾測試銀行功能\n4. 使用 \"Lock Management\" 資料夾測試鎖管理功能\n5. 使用 \"Monitoring\" 資料夾查看系統監控資訊",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "distributed-lock-research-api",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "應用程式基礎 URL"
+    },
+    {
+      "key": "apiPath",
+      "value": "/api",
+      "type": "string",
+      "description": "API 路徑前綴"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Application Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "檢查應用程式整體健康狀態"
+          },
+          "response": []
+        },
+        {
+          "name": "Distributed Lock Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health/distributedLockHealth",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health", "distributedLockHealth"]
+            },
+            "description": "檢查分散式鎖系統健康狀態"
+          },
+          "response": []
+        }
+      ],
+      "description": "健康檢查相關端點"
+    },
+    {
+      "name": "Banking Operations",
+      "item": [
+        {
+          "name": "Get Account Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/accounts/ACC001/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "accounts", "ACC001", "balance"]
+            },
+            "description": "查詢指定帳戶的餘額資訊"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}{{apiPath}}/accounts/ACC001/balance",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPath}}", "accounts", "ACC001", "balance"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"查詢成功\",\n  \"data\": {\n    \"accountNumber\": \"ACC001\",\n    \"balance\": 10000.00,\n    \"status\": \"ACTIVE\"\n  },\n  \"timestamp\": \"2024-01-01T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Transfer Money",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromAccount\": \"ACC001\",\n  \"toAccount\": \"ACC002\",\n  \"amount\": 1000.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "transfer"]
+            },
+            "description": "執行匯款操作，從一個帳戶轉移資金到另一個帳戶"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fromAccount\": \"ACC001\",\n  \"toAccount\": \"ACC002\",\n  \"amount\": 1000.00\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}{{apiPath}}/transfer",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPath}}", "transfer"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"匯款成功\",\n  \"data\": {\n    \"transactionId\": \"TXN123456\",\n    \"success\": true,\n    \"message\": \"匯款完成\",\n    \"fromAccount\": \"ACC001\",\n    \"toAccount\": \"ACC002\",\n    \"amount\": 1000.00,\n    \"lockProvider\": \"redis\"\n  },\n  \"timestamp\": \"2024-01-01T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Withdraw Money",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"amount\": 500.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "withdraw"]
+            },
+            "description": "執行扣款操作，從指定帳戶扣除指定金額"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"amount\": 500.00\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}{{apiPath}}/withdraw",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPath}}", "withdraw"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"扣款成功\",\n  \"data\": {\n    \"transactionId\": \"TXN123457\",\n    \"success\": true,\n    \"message\": \"扣款完成\",\n    \"fromAccount\": \"ACC001\",\n    \"toAccount\": null,\n    \"amount\": 500.00,\n    \"lockProvider\": \"redis\"\n  },\n  \"timestamp\": \"2024-01-01T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Large Transfer Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromAccount\": \"ACC006\",\n  \"toAccount\": \"ACC007\",\n  \"amount\": 5000.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "transfer"]
+            },
+            "description": "測試大額轉帳功能"
+          },
+          "response": []
+        }
+      ],
+      "description": "銀行業務操作相關端點"
+    },
+    {
+      "name": "Lock Management",
+      "item": [
+        {
+          "name": "Get Lock Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/lock-management/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "lock-management", "status"]
+            },
+            "description": "獲取當前分散式鎖提供者的狀態資訊"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}{{apiPath}}/lock-management/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPath}}", "lock-management", "status"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"currentProvider\": \"redis\",\n  \"activeLocks\": 0,\n  \"redisAvailable\": true,\n  \"zookeeperAvailable\": true,\n  \"supportedProviders\": [\"redis\", \"zookeeper\"],\n  \"statistics\": {\n    \"totalLockAcquisitions\": 150,\n    \"successfulAcquisitions\": 148,\n    \"failedAcquisitions\": 2,\n    \"averageAcquisitionTime\": 25.5\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Switch to Redis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"redis\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/lock-management/switch",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "lock-management", "switch"]
+            },
+            "description": "切換分散式鎖提供者到 Redis"
+          },
+          "response": []
+        },
+        {
+          "name": "Switch to ZooKeeper",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"zookeeper\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/lock-management/switch",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "lock-management", "switch"]
+            },
+            "description": "切換分散式鎖提供者到 ZooKeeper"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Redis Availability",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/lock-management/check/redis",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "lock-management", "check", "redis"]
+            },
+            "description": "檢查 Redis 鎖提供者的可用性"
+          },
+          "response": []
+        },
+        {
+          "name": "Check ZooKeeper Availability",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/lock-management/check/zookeeper",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "lock-management", "check", "zookeeper"]
+            },
+            "description": "檢查 ZooKeeper 鎖提供者的可用性"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Supported Providers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/lock-management/providers",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "lock-management", "providers"]
+            },
+            "description": "獲取支援的分散式鎖提供者列表"
+          },
+          "response": []
+        }
+      ],
+      "description": "分散式鎖管理相關端點"
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "Application Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "info"]
+            },
+            "description": "獲取應用程式基本資訊"
+          },
+          "response": []
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "metrics"]
+            },
+            "description": "獲取可用的指標列表"
+          },
+          "response": []
+        },
+        {
+          "name": "Business Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/business-metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "business-metrics"]
+            },
+            "description": "獲取業務相關指標"
+          },
+          "response": []
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/prometheus",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "prometheus"]
+            },
+            "description": "獲取 Prometheus 格式的指標資料"
+          },
+          "response": []
+        },
+        {
+          "name": "System Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/system-info",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "system-info"]
+            },
+            "description": "獲取系統配置資訊"
+          },
+          "response": []
+        }
+      ],
+      "description": "系統監控相關端點"
+    },
+    {
+      "name": "Test Scenarios",
+      "item": [
+        {
+          "name": "Concurrent Transfer Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromAccount\": \"ACC001\",\n  \"toAccount\": \"ACC002\",\n  \"amount\": 100.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "transfer"]
+            },
+            "description": "併發轉帳測試 - 可以同時執行多個此請求來測試分散式鎖的有效性"
+          },
+          "response": []
+        },
+        {
+          "name": "Insufficient Funds Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromAccount\": \"ACC001\",\n  \"toAccount\": \"ACC002\",\n  \"amount\": 999999.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "transfer"]
+            },
+            "description": "餘額不足測試 - 測試當帳戶餘額不足時的錯誤處理"
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Account Test",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiPath}}/accounts/INVALID/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPath}}", "accounts", "INVALID", "balance"]
+            },
+            "description": "無效帳戶測試 - 測試查詢不存在帳戶時的錯誤處理"
+          },
+          "response": []
+        }
+      ],
+      "description": "測試場景集合"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 設定請求時間戳",
+          "pm.globals.set('timestamp', new Date().toISOString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 通用測試腳本",
+          "pm.test('Status code is success', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202]);",
+          "});",
+          "",
+          "pm.test('Response time is less than 5000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "pm.test('Response has correct content type', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});"
+        ]
+      }
+    }
+  ]
+}

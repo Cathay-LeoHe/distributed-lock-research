@@ -1,0 +1,763 @@
+{
+	"info": {
+		"_postman_id": "distributed-lock-concurrent-tests",
+		"name": "Distributed Lock - Concurrent Transfer Tests",
+		"description": "高併發分散式鎖測試集合，用於驗證多服務環境下的資料一致性",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Setup Tests",
+			"item": [
+				{
+					"name": "Check App1 Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"App1 is healthy\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"UP\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/actuator/health",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					}
+				},
+				{
+					"name": "Check App2 Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"App2 is healthy\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"UP\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app2_url}}/actuator/health",
+							"host": [
+								"{{app2_url}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					}
+				},
+				{
+					"name": "Check App3 Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"App3 is healthy\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"UP\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app3_url}}/actuator/health",
+							"host": [
+								"{{app3_url}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Initial Balance - ACC001",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get initial balance successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.globals.set(\"initial_balance_acc001\", jsonData.data.balance);",
+									"    console.log(\"Initial balance ACC001: \" + jsonData.data.balance);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/accounts/ACC001/balance",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"accounts",
+								"ACC001",
+								"balance"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Initial Balance - ACC002",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get initial balance successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.globals.set(\"initial_balance_acc002\", jsonData.data.balance);",
+									"    console.log(\"Initial balance ACC002: \" + jsonData.data.balance);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/accounts/ACC002/balance",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"accounts",
+								"ACC002",
+								"balance"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Concurrent Transfer Tests",
+			"item": [
+				{
+					"name": "Concurrent Transfer - App1 to App1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Transfer request processed\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (pm.response.code === 200) {",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"        console.log(\"✅ Transfer successful: \" + JSON.stringify(jsonData.data));",
+									"    } else {",
+									"        console.log(\"⚠️ Transfer failed: \" + jsonData.message);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fromAccount\": \"ACC001\",\n    \"toAccount\": \"ACC002\",\n    \"amount\": {{transfer_amount}}\n}"
+						},
+						"url": {
+							"raw": "{{app1_url}}/transfer",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"transfer"
+							]
+						}
+					}
+				},
+				{
+					"name": "Concurrent Transfer - App2 to App2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Transfer request processed\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (pm.response.code === 200) {",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"        console.log(\"✅ Transfer successful: \" + JSON.stringify(jsonData.data));",
+									"    } else {",
+									"        console.log(\"⚠️ Transfer failed: \" + jsonData.message);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fromAccount\": \"ACC001\",\n    \"toAccount\": \"ACC002\",\n    \"amount\": {{transfer_amount}}\n}"
+						},
+						"url": {
+							"raw": "{{app2_url}}/transfer",
+							"host": [
+								"{{app2_url}}"
+							],
+							"path": [
+								"transfer"
+							]
+						}
+					}
+				},
+				{
+					"name": "Concurrent Transfer - App3 to App3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Transfer request processed\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (pm.response.code === 200) {",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"        console.log(\"✅ Transfer successful: \" + JSON.stringify(jsonData.data));",
+									"    } else {",
+									"        console.log(\"⚠️ Transfer failed: \" + jsonData.message);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fromAccount\": \"ACC001\",\n    \"toAccount\": \"ACC002\",\n    \"amount\": {{transfer_amount}}\n}"
+						},
+						"url": {
+							"raw": "{{app3_url}}/transfer",
+							"host": [
+								"{{app3_url}}"
+							],
+							"path": [
+								"transfer"
+							]
+						}
+					}
+				},
+				{
+					"name": "Mixed Concurrent Transfers - Load Balancer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Transfer request processed\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (pm.response.code === 200) {",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"        console.log(\"✅ LB Transfer successful: \" + JSON.stringify(jsonData.data));",
+									"    } else {",
+									"        console.log(\"⚠️ LB Transfer failed: \" + jsonData.message);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fromAccount\": \"ACC001\",\n    \"toAccount\": \"ACC002\",\n    \"amount\": {{transfer_amount}}\n}"
+						},
+						"url": {
+							"raw": "{{lb_url}}/transfer",
+							"host": [
+								"{{lb_url}}"
+							],
+							"path": [
+								"transfer"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Verification Tests",
+			"item": [
+				{
+					"name": "Verify Final Balance - ACC001",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get final balance successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    ",
+									"    const finalBalance = jsonData.data.balance;",
+									"    const initialBalance = parseFloat(pm.globals.get(\"initial_balance_acc001\"));",
+									"    const transferAmount = parseFloat(pm.globals.get(\"transfer_amount\"));",
+									"    const expectedTransfers = parseInt(pm.globals.get(\"expected_successful_transfers\"));",
+									"    ",
+									"    const expectedFinalBalance = initialBalance - (transferAmount * expectedTransfers);",
+									"    ",
+									"    console.log(\"=== ACC001 Balance Verification ===\");",
+									"    console.log(\"Initial Balance: \" + initialBalance);",
+									"    console.log(\"Final Balance: \" + finalBalance);",
+									"    console.log(\"Transfer Amount: \" + transferAmount);",
+									"    console.log(\"Expected Successful Transfers: \" + expectedTransfers);",
+									"    console.log(\"Expected Final Balance: \" + expectedFinalBalance);",
+									"    console.log(\"Actual Difference: \" + (initialBalance - finalBalance));",
+									"    ",
+									"    pm.globals.set(\"final_balance_acc001\", finalBalance);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/accounts/ACC001/balance",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"accounts",
+								"ACC001",
+								"balance"
+							]
+						}
+					}
+				},
+				{
+					"name": "Verify Final Balance - ACC002",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get final balance successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    ",
+									"    const finalBalance = jsonData.data.balance;",
+									"    const initialBalance = parseFloat(pm.globals.get(\"initial_balance_acc002\"));",
+									"    const transferAmount = parseFloat(pm.globals.get(\"transfer_amount\"));",
+									"    const expectedTransfers = parseInt(pm.globals.get(\"expected_successful_transfers\"));",
+									"    ",
+									"    const expectedFinalBalance = initialBalance + (transferAmount * expectedTransfers);",
+									"    ",
+									"    console.log(\"=== ACC002 Balance Verification ===\");",
+									"    console.log(\"Initial Balance: \" + initialBalance);",
+									"    console.log(\"Final Balance: \" + finalBalance);",
+									"    console.log(\"Transfer Amount: \" + transferAmount);",
+									"    console.log(\"Expected Successful Transfers: \" + expectedTransfers);",
+									"    console.log(\"Expected Final Balance: \" + expectedFinalBalance);",
+									"    console.log(\"Actual Difference: \" + (finalBalance - initialBalance));",
+									"    ",
+									"    pm.globals.set(\"final_balance_acc002\", finalBalance);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/accounts/ACC002/balance",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"accounts",
+								"ACC002",
+								"balance"
+							]
+						}
+					}
+				},
+				{
+					"name": "Verify Data Consistency",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Data consistency verification\", function () {",
+									"    const initialAcc001 = parseFloat(pm.globals.get(\"initial_balance_acc001\"));",
+									"    const initialAcc002 = parseFloat(pm.globals.get(\"initial_balance_acc002\"));",
+									"    const finalAcc001 = parseFloat(pm.globals.get(\"final_balance_acc001\"));",
+									"    const finalAcc002 = parseFloat(pm.globals.get(\"final_balance_acc002\"));",
+									"    ",
+									"    const initialTotal = initialAcc001 + initialAcc002;",
+									"    const finalTotal = finalAcc001 + finalAcc002;",
+									"    ",
+									"    console.log(\"=== Data Consistency Check ===\");",
+									"    console.log(\"Initial Total: \" + initialTotal);",
+									"    console.log(\"Final Total: \" + finalTotal);",
+									"    console.log(\"Difference: \" + Math.abs(initialTotal - finalTotal));",
+									"    ",
+									"    // 總金額應該保持不變（允許小數點精度誤差）",
+									"    pm.expect(Math.abs(initialTotal - finalTotal)).to.be.below(0.01);",
+									"    ",
+									"    if (Math.abs(initialTotal - finalTotal) < 0.01) {",
+									"        console.log(\"✅ Data consistency maintained!\");",
+									"    } else {",
+									"        console.log(\"❌ Data consistency violated!\");",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/actuator/health",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Lock Status Monitoring",
+			"item": [
+				{
+					"name": "Get Lock Status - App1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get lock status successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    console.log(\"App1 Lock Status: \" + JSON.stringify(jsonData, null, 2));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/lock-management/status",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"lock-management",
+								"status"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Lock Status - App2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get lock status successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    console.log(\"App2 Lock Status: \" + JSON.stringify(jsonData, null, 2));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app2_url}}/lock-management/status",
+							"host": [
+								"{{app2_url}}"
+							],
+							"path": [
+								"lock-management",
+								"status"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Lock Status - App3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get lock status successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    console.log(\"App3 Lock Status: \" + JSON.stringify(jsonData, null, 2));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app3_url}}/lock-management/status",
+							"host": [
+								"{{app3_url}}"
+							],
+							"path": [
+								"lock-management",
+								"status"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Performance Metrics",
+			"item": [
+				{
+					"name": "Get Business Metrics - App1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get business metrics successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const jsonData = pm.response.json();",
+									"    console.log(\"App1 Business Metrics: \" + JSON.stringify(jsonData, null, 2));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/actuator/business-metrics",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"actuator",
+								"business-metrics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Prometheus Metrics - App1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get prometheus metrics successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseText = pm.response.text();",
+									"    ",
+									"    // 提取關鍵指標",
+									"    const lockAcquisitionMetrics = responseText.match(/distributed_lock_acquisition_total\\{.*?\\}\\s+([0-9.]+)/g);",
+									"    const transferMetrics = responseText.match(/banking_transfer_total\\{.*?\\}\\s+([0-9.]+)/g);",
+									"    ",
+									"    console.log(\"=== Key Metrics ===\");",
+									"    if (lockAcquisitionMetrics) {",
+									"        console.log(\"Lock Acquisition Metrics:\");",
+									"        lockAcquisitionMetrics.forEach(metric => console.log(\"  \" + metric));",
+									"    }",
+									"    if (transferMetrics) {",
+									"        console.log(\"Transfer Metrics:\");",
+									"        transferMetrics.forEach(metric => console.log(\"  \" + metric));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{app1_url}}/actuator/prometheus",
+							"host": [
+								"{{app1_url}}"
+							],
+							"path": [
+								"actuator",
+								"prometheus"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// 設置測試參數",
+					"pm.globals.set(\"transfer_amount\", \"100.00\");",
+					"pm.globals.set(\"expected_successful_transfers\", \"1\");",
+					"",
+					"// 生成唯一的測試 ID",
+					"pm.globals.set(\"test_id\", Date.now().toString());"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// 全局測試後處理",
+					"pm.test(\"Response time is acceptable\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "app1_url",
+			"value": "http://localhost:8081/api",
+			"type": "string"
+		},
+		{
+			"key": "app2_url",
+			"value": "http://localhost:8082/api",
+			"type": "string"
+		},
+		{
+			"key": "app3_url",
+			"value": "http://localhost:8083/api",
+			"type": "string"
+		},
+		{
+			"key": "lb_url",
+			"value": "http://localhost:8080/api",
+			"type": "string"
+		},
+		{
+			"key": "transfer_amount",
+			"value": "100.00",
+			"type": "string"
+		}
+	]
+}
